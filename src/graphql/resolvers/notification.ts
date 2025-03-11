@@ -2,10 +2,12 @@ import { authenticateGraphQLRoute } from "../../utils/utils.js";
 import { AppContext } from "../../server/server.js";
 import {
   createNotificationGroup,
+  deleteNotificationGroup,
   getAllNotificationGroups,
+  updateNotificationGroup,
 } from "../../services/notification.service.js";
 import logger from "../../server/logger.js";
-import { INotificationDocument } from "src/interface/notification.interface.js";
+import { INotificationDocument } from "../../interface/notification.interface.js";
 
 export const NotificationResolver = {
   Query: {
@@ -38,6 +40,39 @@ export const NotificationResolver = {
 
       return {
         notifications: [notification],
+      };
+    },
+    async updateNotificationGroup(
+      _: undefined,
+      args: { notificationId: string; group: INotificationDocument },
+      contextValue: AppContext
+    ) {
+      const { req } = contextValue;
+      await authenticateGraphQLRoute(req);
+
+      const { notificationId, group } = args;
+      await updateNotificationGroup(parseInt(notificationId), group);
+      const notification = {
+        ...group,
+        id: parseInt(notificationId),
+      };
+      return {
+        notifications: [notification],
+      };
+    },
+    async deleteNotificationGroup(
+      _: undefined,
+      args: { notificationId: string },
+      contextValue: AppContext
+    ) {
+      const { req } = contextValue;
+      await authenticateGraphQLRoute(req);
+
+      const { notificationId } = args;
+      await deleteNotificationGroup(parseInt(notificationId));
+
+      return {
+        notificationID: notificationId,
       };
     },
   },
