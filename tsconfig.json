@@ -7,7 +7,7 @@
     "lib": ["ES2022"],
     "baseUrl": "./",
     "rootDir": "./src",
-    "outDir": "../uptimer-app/build",
+    "outDir": "./build",
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
