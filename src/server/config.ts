@@ -1,5 +1,13 @@
+import { fileURLToPath } from "url";
+import path from "path";
 import dotenv from "dotenv";
-dotenv.config({ path: "../.env" });
+
+// Chuyển đổi `import.meta.url` thành đường dẫn thư mục
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load `.env`
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const env = process.env;
 

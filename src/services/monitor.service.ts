@@ -4,6 +4,7 @@ import { MonitorModel } from "../models/monitor.model.js";
 import logger from "../server/logger.js";
 import { resolve } from "path";
 import { result } from "lodash";
+import dayjs from "dayjs";
 
 /**
  * Create a new monitors(trả về tất cả monitor trong database)
@@ -106,7 +107,46 @@ export const toggleMonitor = async (
     );
     const result: IMonitorDocument[] = await getUserMonitors(userId, false);
     return result as unknown as IMonitorDocument[];
-  } catch (error : any) {
-    throw new Error(error)
+  } catch (error: any) {
+    throw new Error(error);
+  }
+};
+export const updateSingleMonitor = async (
+  monitorId: number,
+  userId: number,
+  data: IMonitorDocument
+): Promise<IMonitorDocument[]> => {
+  try {
+    await MonitorModel.update(data, {
+      where: {
+        id: monitorId,
+      },
+    });
+    const result: IMonitorDocument[] = await getUserMonitors(userId, false);
+    return result as unknown as IMonitorDocument[];
+  } catch (error: any) {
+    throw new Error(error);
+  }
+};
+export const updateMonitorStatus = async (
+  monitor: IMonitorDocument,
+  timestamp: number,
+  type: string
+): Promise<IMonitorDocument> => {
+  try {
+    const now = timestamp ? dayjs(timestamp).toDate() : dayjs().toDate();
+    const { id, status } = monitor;
+    const updatedMonitor: IMonitorDocument = { ...monitor };
+    updatedMonitor.status = type === "success" ? 0 : 1;
+    const isStatus = type === "success" ? true : false;
+    if (isStatus && status === 1) {
+      updatedMonitor.lastChanged = now;
+    } else if (!isStatus && status === 0) {
+      updatedMonitor.lastChanged = now;
+    }
+    await MonitorModel.update(updatedMonitor, { where: { id } });
+    return updatedMonitor;
+  } catch (error: any) {
+    throw new Error(error);
   }
 };

@@ -32,7 +32,7 @@ export async function getUserByUsernameOrEmail(
   try {
     console.log(`🔍 Kiểm tra user: username="${username}", email="${email}"`);
 
-    const user = await UserModel.findOne({
+    const user = (await UserModel.findOne({
       raw: true,
       where: {
         [Op.or]: [
@@ -40,16 +40,15 @@ export async function getUserByUsernameOrEmail(
           { email: toLower(email.trim()) },
         ],
       },
-    });
+    })) as unknown as IUserDocument;
 
     if (!user) {
       console.log("⚠ Không tìm thấy user!");
       return null;
     }
 
-    console.log("✅ User tìm thấy:", user);
-    return user as IUserDocument;
-  } catch (error) {
+    return user;
+  } catch (error: any) {
     console.error("❌ Lỗi khi tìm user bằng username/email:", error);
     return null;
   }
@@ -68,7 +67,7 @@ export async function getUserByProp(
     })) as unknown as IUserDocument | undefined;
 
     return user;
-  } catch (error) {
+  } catch (error: any) {
     throw new Error(error);
   }
 }

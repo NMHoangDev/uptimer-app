@@ -1,5 +1,5 @@
 import { authenticateGraphQLRoute } from "../../utils/utils.js";
-import { AppContext } from "../../server/server.js";
+import { AppContext } from "../../interface/monitor.interface.js";
 import {
   createNotificationGroup,
   deleteNotificationGroup,
