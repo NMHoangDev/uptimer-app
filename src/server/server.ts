@@ -1,4 +1,5 @@
-import express, { json, urlencoded } from "express";
+import express, { json, urlencoded, Request, Response } from "express";
+import chalk from "chalk";
 import http from "http";
 import cors from "cors";
 import {
@@ -8,7 +9,7 @@ import {
   SECRET_KEY_ONE,
   SECRET_KEY_TWO,
 } from "./config.js";
-import { ApolloServer } from "@apollo/server";
+import { ApolloServer, BaseContext } from "@apollo/server";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageDisabled } from "@apollo/server/plugin/disabled";
@@ -17,22 +18,21 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { expressMiddleware } from "@apollo/server/express4";
 import cookieSession from "cookie-session";
 import logger from "./logger.js";
+import { mergedGQLSchema } from "../graphql/schema/index.js";
+import { GraphQLSchema } from "graphql";
+import { resolvers } from "../graphql/resolvers/index.js";
+import { AppContext } from "src/interface/monitor.interface.js";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+import customFormat from "dayjs/plugin/customParseFormat.js";
+import dayjs from "dayjs";
 
-const typeDefs = `#graphql
-  type User {
-    userName: String
-  }
-  type Query {
-    user: User
-  }
-`;
-const resolvers = {
-  Query: {
-    user() {
-      return { userName: "DANY" };
-    },
-  },
-};
+dayjs.extend(utc);
+
+dayjs.extend(timezone);
+dayjs.extend(customFormat);
+
+// Định nghĩa context
 
 export default class MonitorServer {
   private app: express.Application;
@@ -42,8 +42,15 @@ export default class MonitorServer {
   constructor(app: express.Application) {
     this.app = app;
     this.httpServer = http.createServer(app);
-    const schema = makeExecutableSchema({ typeDefs, resolvers });
-    this.server = new ApolloServer({
+
+    // Tạo schema GraphQL
+    const schema: GraphQLSchema = makeExecutableSchema({
+      typeDefs: mergedGQLSchema,
+      resolvers,
+    });
+
+    // Khởi tạo ApolloServer
+    this.server = new ApolloServer<AppContext | BaseContext>({
       schema,
       introspection: NODE_ENV !== "production",
       plugins: [
@@ -55,64 +62,79 @@ export default class MonitorServer {
     });
   }
 
+  // Phương thức start() gọi đầu tiên
   async start(): Promise<void> {
-    /**
-     * Note: Nên gọi phương thức start() trên ApolloServer
-     * instance before pasing  the instance to expressMiddleware
-     */
     await this.server.start();
     this.standardMiddleware(this.app);
-    this.startServer();
+    this.graphqlRoute(this.app); // Đăng ký GraphQL sau khi server đã start
+    this.startServer(); // Chỉ gọi 1 lần
   }
 
+  // Cài đặt các middleware cần thiết
   private standardMiddleware(app: express.Application): void {
+    // Đặt trust proxy nếu deploy sau reverse proxy (Nginx, Heroku, v.v.)
     app.set("trust proxy", 1);
+
+    // Tắt cache
     app.use((req, res, next) => {
       res.header("Cache-Control", "no-cache, no-store, must-revalidate");
       next();
     });
+
+    // Cookie Session
     app.use(
       cookieSession({
         name: "session",
         keys: [SECRET_KEY_ONE, SECRET_KEY_TWO],
         maxAge: 24 * 7 * 3600000,
-        secure: NODE_ENV !== "development",
-        ...(NODE_ENV !== "development" && {
-          sameSite: "none",
-        }),
+        secure: NODE_ENV === "production", // true nếu chạy HTTPS
+        sameSite: NODE_ENV === "production" ? "none" : "lax",
       })
     );
-    this.graphqlRoute(app);
+
+    // Đăng ký route kiểm tra sức khỏe
     this.healthRoute(app);
   }
-  private graphqlRoute(app: Express): void {
+
+  // Đăng ký route /graphql
+  private graphqlRoute(app: express.Application): void {
     app.use(
       "/graphql",
       cors({
         origin: CLIENT_URL,
         credentials: true,
       }),
-      json({ limit: "200mb" }), // ✅ Middleware hợp lệ
+      json({ limit: "200mb" }),
       urlencoded({ extended: true, limit: "200mb" }),
       expressMiddleware(this.server, {
-        context: async ({ req, res }: { req: Request; res: Response }) => {
+        context: async ({ req, res }: { req?: Request; res?: Response }) => {
+          if (!req || !res) {
+            throw new Error(
+              "⚠ Context không chứa req hoặc res. Kiểm tra middleware!"
+            );
+          }
           return { req, res };
         },
       })
     );
   }
-  private healthRoute(app: Express): void {
+
+  // Đăng ký route kiểm tra sức khỏe
+  private healthRoute(app: express.Application): void {
     app.get("/health", (_req: Request, res: Response) => {
       res.status(200).send("Uptimer monitor service is healthy and OK.");
     });
   }
 
+  // Lắng nghe server
   private async startServer(): Promise<void> {
     try {
       const SERVER_PORT: number = parseInt(PORT!, 10) || 5000;
       logger.info(`Server has started with process id ${process.pid}`);
       this.httpServer.listen(SERVER_PORT, () => {
-        logger.info(`Server started with port ${SERVER_PORT}`);
+        logger.info(
+          chalk.green.bold(`Server started with port ${SERVER_PORT}`)
+        );
       });
     } catch (error) {
       logger.error("Error in start method:", error);

@@ -6,7 +6,7 @@ import {
   IUserDocument,
   IUserResponse,
 } from "../../interface/user.interface.js";
-import { AppContext } from "../../server/server.js";
+import { AppContext } from "../../interface/monitor.interface.js";
 import {
   createNotificationGroup,
   getAllNotificationGroups,

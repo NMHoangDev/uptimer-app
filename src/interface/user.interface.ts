@@ -3,7 +3,7 @@ import { INotificationDocument } from "./notification.interface.js";
 declare global {
   namespace Express {
     interface Request {
-      currentuser?: IAuthPayload;
+      currentUser?: IAuthPayload;
     }
   }
 }
@@ -13,7 +13,7 @@ export interface IAuthPayload {
   email: string;
   iat?: number;
 }
-export interface IUserDocumnet {
+export interface IUserDocument {
   id?: number;
   username?: string;
   facebookID?: string;
@@ -22,10 +22,11 @@ export interface IUserDocumnet {
   password?: string;
   createdAt?: Date;
   socialId?: string;
+  type: string;
   comparePassword(password: string, hashedPassword: string): Promise<boolean>;
   hashedPassword(password: string): Promise<string>;
 }
 export interface IUserResponse {
-  user: IUserDocumnet;
-  notification: INotificationDocument[];
+  user: IUserDocument;
+  notifications: INotificationDocument[];
 }
