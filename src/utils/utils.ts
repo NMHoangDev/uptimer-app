@@ -5,6 +5,9 @@ import pkg from "jsonwebtoken";
 import { IAuthPayload } from "../interface/user.interface.js";
 import { JWT_TOKEN } from "../server/config.js";
 
+export const appTimeZone: string =
+  Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 /**
  *
  * Email validator

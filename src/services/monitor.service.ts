@@ -2,8 +2,6 @@ import { Model, Op, where } from "sequelize";
 import { IMonitorDocument } from "../interface/monitor.interface.js";
 import { MonitorModel } from "../models/monitor.model.js";
 import logger from "../server/logger.js";
-import { resolve } from "path";
-import { result } from "lodash";
 import dayjs from "dayjs";
 
 /**
@@ -15,6 +13,7 @@ export const createMonitor = async (
 ): Promise<IMonitorDocument> => {
   try {
     const result: Model = await MonitorModel.create(data);
+    console.log(result.dataValues);
     return result.dataValues;
   } catch (error: any) {
     throw new Error(error);
@@ -118,12 +117,10 @@ export const updateSingleMonitor = async (
 ): Promise<IMonitorDocument[]> => {
   try {
     await MonitorModel.update(data, {
-      where: {
-        id: monitorId,
-      },
+      where: { id: monitorId },
     });
     const result: IMonitorDocument[] = await getUserMonitors(userId, false);
-    return result as unknown as IMonitorDocument[];
+    return result;
   } catch (error: any) {
     throw new Error(error);
   }
@@ -146,6 +143,23 @@ export const updateMonitorStatus = async (
     }
     await MonitorModel.update(updatedMonitor, { where: { id } });
     return updatedMonitor;
+  } catch (error: any) {
+    throw new Error(error);
+  }
+};
+export const deleteSingleMonitor = async (
+  monitorId: number,
+  userId: number,
+  type: string
+): Promise<IMonitorDocument[]> => {
+  try {
+    logger.info("Type:", type);
+    //TODO: Create a method to delete monitor heartbeats
+    await MonitorModel.destroy({
+      where: { id: monitorId },
+    });
+    const result: IMonitorDocument[] = await getUserMonitors(userId, false);
+    return result;
   } catch (error: any) {
     throw new Error(error);
   }
