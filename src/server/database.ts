@@ -2,14 +2,15 @@ import { Sequelize } from "sequelize";
 import { POSTGRES_DB } from "./config.js";
 import logger from "./logger.js";
 
+// Khởi tạo Sequelize trước khi import model
 export const sequelize = new Sequelize(POSTGRES_DB, {
   dialect: "postgres",
-  logging: false,
+  logging: false, // Hiển thị SQL logs để kiểm tra
   dialectOptions: {
     keepAlive: true,
     ssl: {
-      require: true, // Yêu cầu sử dụng SSL
-      rejectUnauthorized: false, // Tránh lỗi chứng chỉ tự ký
+      require: true,
+      rejectUnauthorized: false,
     },
   },
   pool: {
@@ -20,13 +21,19 @@ export const sequelize = new Sequelize(POSTGRES_DB, {
   },
 });
 
+// Import models sau khi Sequelize đã được khởi tạo
+import { MonitorModel } from "../models/monitor.model.js";
+import { UserModel } from "../models/user.model.js";
+import { NotificationModel } from "../models/notification.model.js";
+
 export async function databaseConnection(): Promise<void> {
   try {
     await sequelize.authenticate();
-    await sequelize.sync();
-    logger.info("✅ Database connection successfully established");
+
+    await sequelize.sync({ alter: true }); // Hoặc force: true nếu cần xóa & tạo lại bảng
+
+    console.log("✅ Database synchronized");
   } catch (error: any) {
-    logger.error("❌ Unable to connect to database:", error.message);
-    console.log(error);
+    console.error("❌ Unable to connect to database:", error.message);
   }
 }

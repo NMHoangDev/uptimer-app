@@ -106,6 +106,8 @@ const MonitorModel: ModelDefined<IMonitorDocument, MonitorAttributes> =
       },
     },
     {
+      tableName: "monitors", // Đảm bảo Sequelize tạo đúng bảng `monitors`
+      timestamps: true,
       indexes: [
         {
           unique: false,
