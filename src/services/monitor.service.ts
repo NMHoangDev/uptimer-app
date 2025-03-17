@@ -3,6 +3,10 @@ import { IMonitorDocument } from "../interface/monitor.interface.js";
 import { MonitorModel } from "../models/monitor.model.js";
 import logger from "../server/logger.js";
 import dayjs from "dayjs";
+const HTTP_TYPE = "http";
+const TCP_TYPE = "http";
+const MONGO_TYPE = "http";
+const REDIS_TYPE = "http";
 
 /**
  * Create a new monitors(trả về tất cả monitor trong database)
@@ -56,7 +60,9 @@ export const getUserActiveMonitors = async (
  * Return all active monitors(trả về tất cả monitor trong database)
  * @returns {Promise<IMonitorDocument[]>}
  */
-export const getAllUserMonitor = async (): Promise<IMonitorDocument[]> => {
+export const getAllUserActiveMonitor = async (): Promise<
+  IMonitorDocument[]
+> => {
   try {
     const monitors: IMonitorDocument[] = MonitorModel.findAll({
       raw: true,
@@ -123,6 +129,24 @@ export const updateSingleMonitor = async (
     return result;
   } catch (error: any) {
     throw new Error(error);
+  }
+};
+export const startCreatedMonitors = (
+  monitor: IMonitorDocument,
+  name: string,
+  type: string
+) => {
+  if (type === HTTP_TYPE) {
+    logger.info("http", monitor.name, name);
+  }
+  if (type === TCP_TYPE) {
+    logger.info("tcp", monitor.name, name);
+  }
+  if (type === MONGO_TYPE) {
+    logger.info("mongo", monitor.name, name);
+  }
+  if (type === REDIS_TYPE) {
+    logger.info("http", monitor.name, name);
   }
 };
 export const updateMonitorStatus = async (

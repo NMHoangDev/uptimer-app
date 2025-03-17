@@ -6,8 +6,9 @@ async function initializeApp() {
   const app = express();
   const monitorServer = new MonitorServer(app);
 
-  await monitorServer.start();
-  await databaseConnection();
+  await databaseConnection().then(() => {
+    monitorServer.start();
+  });
 }
 
 initializeApp();
