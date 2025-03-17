@@ -146,6 +146,7 @@ export const monitorSchema = buildSchema(`#graphql
         getSingleMonitors(monitorId: Int!): MonitorResponse
         getUserMonitors(userId: Int!): MonitorResponse
         AutoRefresh(userId: Int!, refresh: Boolean!): AutoRefresh
+        autoRefresh(userId: String!, refresh : Boolean!) : AutoRefresh
     }
 
     type Mutation {

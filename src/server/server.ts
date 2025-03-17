@@ -21,11 +21,14 @@ import logger from "./logger.js";
 import { mergedGQLSchema } from "../graphql/schema/index.js";
 import { GraphQLSchema } from "graphql";
 import { resolvers } from "../graphql/resolvers/index.js";
-import { AppContext } from "src/interface/monitor.interface.js";
+import { AppContext } from "../interface/monitor.interface.js";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import customFormat from "dayjs/plugin/customParseFormat.js";
 import dayjs from "dayjs";
+import { startMonitors } from "../utils/utils.js";
+import { WebSocketServer, Server as WSServer } from "ws";
+import { useServer } from "../../node_modules/graphql-ws/dist/use/ws.js";
 
 dayjs.extend(utc);
 
@@ -38,16 +41,27 @@ export default class MonitorServer {
   private app: express.Application;
   private httpServer: http.Server;
   private server: ApolloServer;
+  private wsServer: WSServer;
 
   constructor(app: express.Application) {
     this.app = app;
     this.httpServer = http.createServer(app);
+    this.wsServer = new WebSocketServer({
+      server: this.httpServer,
+      path: "/graphql",
+    });
 
     // Tạo schema GraphQL
     const schema: GraphQLSchema = makeExecutableSchema({
       typeDefs: mergedGQLSchema,
       resolvers,
     });
+    const serverCleanup = useServer(
+      {
+        schema,
+      },
+      this.wsServer
+    );
 
     // Khởi tạo ApolloServer
     this.server = new ApolloServer<AppContext | BaseContext>({
@@ -55,6 +69,15 @@ export default class MonitorServer {
       introspection: NODE_ENV !== "production",
       plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer: this.httpServer }),
+        {
+          async serverWillStart() {
+            return {
+              async drainServer() {
+                await serverCleanup.dispose();
+              },
+            };
+          },
+        },
         ...(NODE_ENV === "production"
           ? [ApolloServerPluginLandingPageDisabled()]
           : [ApolloServerPluginLandingPageLocalDefault({ embed: true })]),
@@ -67,6 +90,7 @@ export default class MonitorServer {
     await this.server.start();
     this.standardMiddleware(this.app);
     this.graphqlRoute(this.app); // Đăng ký GraphQL sau khi server đã start
+    this.webSocketConnection();
     this.startServer(); // Chỉ gọi 1 lần
   }
 
@@ -125,6 +149,11 @@ export default class MonitorServer {
       res.status(200).send("Uptimer monitor service is healthy and OK.");
     });
   }
+  private webSocketConnection() {
+    this.wsServer.on("connection", () => {
+      console.log("websocket connect");
+    });
+  }
 
   // Lắng nghe server
   private async startServer(): Promise<void> {
@@ -135,6 +164,7 @@ export default class MonitorServer {
         logger.info(
           chalk.green.bold(`Server started with port ${SERVER_PORT}`)
         );
+        startMonitors();
       });
     } catch (error) {
       logger.error("Error in start method:", error);
