@@ -69,6 +69,15 @@ export default class MonitorServer {
       introspection: NODE_ENV !== "production",
       plugins: [
         ApolloServerPluginDrainHttpServer({ httpServer: this.httpServer }),
+        {
+          async serverWillStart() {
+            return {
+              async drainServer() {
+                await serverCleanup.dispose();
+              },
+            };
+          },
+        },
         ...(NODE_ENV === "production"
           ? [ApolloServerPluginLandingPageDisabled()]
           : [ApolloServerPluginLandingPageLocalDefault({ embed: true })]),
@@ -81,6 +90,7 @@ export default class MonitorServer {
     await this.server.start();
     this.standardMiddleware(this.app);
     this.graphqlRoute(this.app); // Đăng ký GraphQL sau khi server đã start
+    this.webSocketConnection();
     this.startServer(); // Chỉ gọi 1 lần
   }
 
@@ -137,6 +147,11 @@ export default class MonitorServer {
   private healthRoute(app: express.Application): void {
     app.get("/health", (_req: Request, res: Response) => {
       res.status(200).send("Uptimer monitor service is healthy and OK.");
+    });
+  }
+  private webSocketConnection() {
+    this.wsServer.on("connection", () => {
+      console.log("websocket connect");
     });
   }
 
