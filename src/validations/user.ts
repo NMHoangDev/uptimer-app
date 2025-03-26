@@ -27,7 +27,7 @@ const email = string()
 const password = string()
   .optional()
   .min(5, "Password should have at least 5 characters.")
-  .max(10, "Password should have at most 10 characters.");
+  .max(20, "Password should have at most 10 characters.");
 const googleId = string().optional();
 const facebookId = string().optional();
 

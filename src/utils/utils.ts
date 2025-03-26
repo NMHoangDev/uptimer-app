@@ -10,8 +10,12 @@ import { IMonitorDocument } from "../interface/monitor.interface.js";
 import {
   getAllUserActiveMonitor,
   getMonitorById,
+  getUserActiveMonitors,
   startCreatedMonitors,
 } from "../services/monitor.service.js";
+import { startSingleJob } from "./jobs.js";
+import { pubSub } from "../graphql/resolvers/monitor.js";
+import logger from "../server/logger.js";
 const { min, toLower } = pkgLodash;
 
 export const appTimeZone: string =
@@ -80,4 +84,41 @@ export const resumeMonitors = async (monitorId: number): Promise<void> => {
   const monitor: IMonitorDocument = await getMonitorById(monitorId);
   startCreatedMonitors(monitor, toLower(monitor.name), monitor.type);
   await sleep(getRandomInt(300, 1000));
+};
+export const enableAutoRefreshJob = (cookies: string): void => {
+  const { verify } = pkg;
+  const result: Record<string, string> = getCookies(cookies);
+  const session: string = Buffer.from(result.session, "base64").toString();
+  const payload: IAuthPayload = verify(
+    JSON.parse(session).jwt,
+    JWT_TOKEN
+  ) as IAuthPayload;
+  const enableAutoRefresh: boolean = JSON.parse(session).enableAutomaticRefresh;
+  if (enableAutoRefresh) {
+    startSingleJob(`${toLower(payload!.name)}`, appTimeZone, 10, async () => {
+      const monitors: IMonitorDocument[] = await getUserActiveMonitors(
+        payload.id
+      );
+      logger.info("Job is enabled");
+      //TODO: publish data to client
+      pubSub.publish("MONITORS_UPDATED", {
+        monitorsUpdated: {
+          userId: payload.id,
+          monitors: monitors,
+        },
+      });
+    });
+  }
+};
+export const encodeBase64 = (user: string, pass: string): string => {
+  return Buffer.from(`${user || ""}:${pass || ""}`).toString("base64");
+};
+
+const getCookies = (cookie: string): Record<string, string> => {
+  const cookies: Record<string, string> = {};
+  cookie.split(":").forEach((cookieData: any) => {
+    const parts: RegExpMatchArray | null = cookieData.match(/(.*?)=(.*)$/);
+    cookies[parts![1].trim()] = (parts![2] || "").trim();
+  });
+  return cookies;
 };

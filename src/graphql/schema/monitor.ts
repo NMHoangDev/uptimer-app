@@ -156,4 +156,7 @@ export const monitorSchema = buildSchema(`#graphql
         deleteMonitor(monitorId: Int!, userId: Int!): DeleteMonitorResponse
         setAutoRefresh(userId: Int!, refresh: Boolean!): AutoRefresh
     }
+    type Subscription {
+        monitorsUpdated: MonitorResponse
+    }
 `);

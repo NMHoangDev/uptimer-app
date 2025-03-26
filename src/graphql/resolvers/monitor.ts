@@ -17,7 +17,12 @@ import logger from "../../server/logger.js";
 import { startSingleJob, stopSingleBackgroundJob } from "../../utils/jobs.js";
 import { getSingleNotificationGroup } from "../../services/notification.service.js";
 import pkg from "lodash";
+
+import { subscribe } from "graphql";
 const { toLower } = pkg;
+import { PubSub } from "graphql-subscriptions";
+
+export const pubSub = new PubSub();
 
 export const MonitorResolver = {
   Query: {
@@ -71,17 +76,27 @@ export const MonitorResolver = {
               parseInt(userId!)
             );
             //TODO: publish data to client
-            logger.info(monitors[0].name);
+            pubSub.publish("MONITORS_UPDATED", {
+              monitorsUpdated: {
+                userId: parseInt(userId, 10),
+                monitors: monitors,
+              },
+            });
           }
         );
+        return {
+          refresh,
+        };
       } else {
         req.session = {
           ...req.session,
           enableAutomaticRefresh: false,
         };
         stopSingleBackgroundJob(`${toLower(req.currentUser!.name)}`);
+        return {
+          refresh,
+        };
       }
-      return refresh;
     },
   },
   Mutation: {
@@ -194,6 +209,11 @@ export const MonitorResolver = {
     },
     notifications: (monitor: IMonitorDocument) => {
       return getSingleNotificationGroup(monitor.notificationId!);
+    },
+  },
+  Subscription: {
+    monitorsUpdated: {
+      subscribe: () => pubSub.asyncIterableIterator(["MONITORS_UPDATED"]),
     },
   },
 };

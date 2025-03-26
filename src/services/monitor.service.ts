@@ -3,10 +3,13 @@ import { IMonitorDocument } from "../interface/monitor.interface.js";
 import { MonitorModel } from "../models/monitor.model.js";
 import logger from "../server/logger.js";
 import dayjs from "dayjs";
+import { httpStatusMonitor } from "./http.service.js";
+import pkg from "lodash";
 const HTTP_TYPE = "http";
 const TCP_TYPE = "http";
 const MONGO_TYPE = "http";
 const REDIS_TYPE = "http";
+const { toLower } = pkg;
 
 /**
  * Create a new monitors(trả về tất cả monitor trong database)
@@ -137,7 +140,7 @@ export const startCreatedMonitors = (
   type: string
 ) => {
   if (type === HTTP_TYPE) {
-    logger.info("http", monitor.name, name);
+    httpStatusMonitor(monitor!, toLower(name));
   }
   if (type === TCP_TYPE) {
     logger.info("tcp", monitor.name, name);
