@@ -5,11 +5,13 @@ import dayjs from "dayjs";
 import { IMonitorDocument } from "../interface/monitor.interface.js";
 import { startSingleJob } from "../utils/jobs.js";
 import { appTimeZone } from "../utils/utils.js";
+import { httpMonitor } from "../monitors/http.monitor.js";
 
 export const createHttpHeartBeat = async (
   data: IHeartBeat
 ): Promise<IHeartBeat> => {
   try {
+    console.log("Heartbeat data:", data);
     const result: Model = await HttpModel.create(data);
     return result.dataValues;
   } catch (error: any) {
@@ -21,8 +23,7 @@ export const getHttpHeartBeatsByDuration = async (
   duration: number = 24
 ): Promise<IHeartBeat[]> => {
   try {
-    const dateTime: Date = dayjs.utc().toDate();
-    dateTime.setHours(dateTime.getHours() - duration);
+    const fromTimestamp = dayjs.utc().subtract(duration, "hour").valueOf();
     const heartbeats: IHeartBeat[] = (await HttpModel.findAll({
       raw: true,
       where: {
@@ -30,14 +31,18 @@ export const getHttpHeartBeatsByDuration = async (
           { monitorId },
           {
             timestamp: {
-              [Op.gte]: dateTime,
+              [Op.gte]: fromTimestamp,
             },
           },
         ],
       },
       order: [["timestamp", "DESC"]],
     })) as unknown as IHeartBeat[];
-    return heartbeats;
+    if (heartbeats == null) {
+      return [];
+    } else {
+      return heartbeats;
+    }
   } catch (error: any) {
     throw new Error(error);
   }
@@ -60,6 +65,6 @@ export const httpStatusMonitor = async (
     bearerToken: monitor.bearerToken,
   } as IMonitorDocument;
   startSingleJob(name, appTimeZone, monitor.frequency, async () =>
-    console.log(httpMonitorData)
+    httpMonitor.start(httpMonitorData)
   );
 };

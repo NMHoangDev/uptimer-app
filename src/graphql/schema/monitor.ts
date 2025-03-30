@@ -34,7 +34,7 @@ export const monitorSchema = buildSchema(`#graphql
     }
     input HeartBeatInput {
         id: ID
-        monitor_id: Int
+        monitorId: Int
         status: Int
         code: Int
         message: String
@@ -56,7 +56,7 @@ export const monitorSchema = buildSchema(`#graphql
     # Chuyển từ input thành type
     type HeartBeat {
     id: ID
-    monitor_id: Int
+    monitorId: Int
     status: Int
     code: Int
     message: String

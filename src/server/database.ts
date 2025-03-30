@@ -21,11 +21,6 @@ export const sequelize = new Sequelize(POSTGRES_DB, {
   },
 });
 
-// Import models sau khi Sequelize đã được khởi tạo
-import { MonitorModel } from "../models/monitor.model.js";
-import { UserModel } from "../models/user.model.js";
-import { NotificationModel } from "../models/notification.model.js";
-
 export async function databaseConnection(): Promise<void> {
   try {
     await sequelize.authenticate();
