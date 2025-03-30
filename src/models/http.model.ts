@@ -6,11 +6,6 @@ type HttpAttributes = Optional<IHeartBeat, "id">;
 const HttpModel: ModelDefined<IHeartBeat, HttpAttributes> = sequelize.define(
   "http_heartbeats",
   {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
     monitorId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -22,44 +17,36 @@ const HttpModel: ModelDefined<IHeartBeat, HttpAttributes> = sequelize.define(
     code: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      defaultValue: 0,
     },
     message: {
       type: DataTypes.STRING,
-      allowNull: false,
     },
     timestamp: {
       type: DataTypes.BIGINT,
       allowNull: false,
     },
     reqHeaders: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.TEXT,
     },
     resHeaders: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.TEXT,
     },
     reqBody: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.TEXT,
     },
     resBody: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      type: DataTypes.TEXT,
     },
     responseTime: {
       type: DataTypes.INTEGER,
       allowNull: false,
-    },
-    connection: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      defaultValue: 0,
     },
   },
   {
-    // Các cấu hình khác nếu cần
-    tableName: "http_heartbeats", // Đảm bảo tên bảng đúng
-    timestamps: false,
+    tableName: "http_heartbeats",
+    timestamps: true,
     indexes: [
       {
         unique: false,
@@ -67,5 +54,6 @@ const HttpModel: ModelDefined<IHeartBeat, HttpAttributes> = sequelize.define(
       },
     ],
   }
-);
+) as ModelDefined<IHeartBeat, HttpAttributes>;
+
 export { HttpModel };

@@ -3,12 +3,29 @@ import { IMonitorDocument } from "../interface/monitor.interface.js";
 import { MonitorModel } from "../models/monitor.model.js";
 import logger from "../server/logger.js";
 import dayjs from "dayjs";
-import { httpStatusMonitor } from "./http.service.js";
+import {
+  getHttpHeartBeatsByDuration,
+  httpStatusMonitor,
+} from "./http.service.js";
 import pkg from "lodash";
+import { IHeartBeat } from "../interface/heartbeat.interface.js";
+import { getSingleNotificationGroup } from "./notification.service.js";
+import { uptimePercentage } from "../utils/utils.js";
+import { HttpModel } from "../models/http.model.js";
+import {
+  getMongoHeartBeatsByDuration,
+  mongoStatusMonitor,
+} from "./mongo.service.js";
+import { MongoModel } from "../models/mongo.model.js";
+import { RedisModel } from "../models/redis.model.js";
+import {
+  getRedisHeartBeatsByDuration,
+  redisStatusMonitor,
+} from "./redis.service.js";
 const HTTP_TYPE = "http";
-const TCP_TYPE = "http";
-const MONGO_TYPE = "http";
-const REDIS_TYPE = "http";
+const TCP_TYPE = "tcp";
+const MONGO_TYPE = "mongo";
+const REDIS_TYPE = "redis";
 const { toLower } = pkg;
 
 /**
@@ -50,10 +67,23 @@ export const getUserActiveMonitors = async (
 ): Promise<IMonitorDocument[]> => {
   try {
     const monitors: IMonitorDocument[] = await getUserMonitors(userId, true);
+    let heartbeats: IHeartBeat[] = [];
+    const updatedMonitors: IMonitorDocument[] = [];
     for (let monitor of monitors) {
+      const group = await getSingleNotificationGroup(monitor.notificationId!);
+      heartbeats = await getHeartbeats(monitor.type, monitor.id!, 24);
+      //TODO: calculate uptime
+      const uptime = uptimePercentage(heartbeats);
+      monitor = {
+        ...monitor,
+        uptime: 0,
+        heartbeats: heartbeats.slice(0, 16),
+        notifications: group,
+      };
+      updatedMonitors.push(monitor);
       logger.info(`Monitoring ${monitor}`);
     }
-    return monitors;
+    return updatedMonitors;
   } catch (error: any) {
     logger.error(error);
     throw new Error(error);
@@ -86,15 +116,14 @@ export const getMonitorById = async (
   monitorId: number
 ): Promise<IMonitorDocument> => {
   try {
-    const monitors: IMonitorDocument = MonitorModel.findOne({
+    const monitor: IMonitorDocument = (await MonitorModel.findOne({
       raw: true,
-
       where: {
         id: monitorId,
       },
       order: [["createdAt", "DESC"]],
-    }) as unknown as IMonitorDocument;
-    return monitors;
+    })) as unknown as IMonitorDocument;
+    return monitor;
   } catch (error: any) {
     throw new Error(error);
   }
@@ -146,10 +175,10 @@ export const startCreatedMonitors = (
     logger.info("tcp", monitor.name, name);
   }
   if (type === MONGO_TYPE) {
-    logger.info("mongo", monitor.name, name);
+    mongoStatusMonitor(monitor!, toLower(name));
   }
   if (type === REDIS_TYPE) {
-    logger.info("http", monitor.name, name);
+    redisStatusMonitor(monitor!, toLower(name));
   }
 };
 export const updateMonitorStatus = async (
@@ -180,7 +209,6 @@ export const deleteSingleMonitor = async (
   type: string
 ): Promise<IMonitorDocument[]> => {
   try {
-    logger.info("Type:", type);
     //TODO: Create a method to delete monitor heartbeats
     await MonitorModel.destroy({
       where: { id: monitorId },
@@ -189,5 +217,58 @@ export const deleteSingleMonitor = async (
     return result;
   } catch (error: any) {
     throw new Error(error);
+  }
+};
+/**
+ * Get monitor heartbeats
+ * @param type
+ * @param monitorId
+ * @param duration
+ * @returns {Promise<IHeartbeat[]>}
+ */
+export const getHeartbeats = async (
+  type: string,
+  monitorId: number,
+  duration: number
+): Promise<IHeartBeat[]> => {
+  let heartbeats: IHeartBeat[] = [];
+
+  if (type === HTTP_TYPE) {
+    heartbeats = await getHttpHeartBeatsByDuration(monitorId, duration);
+  }
+  if (type === TCP_TYPE) {
+    // heartbeats = await getTcpHeartBeatsByDuration(monitorId, duration);
+  }
+  if (type === MONGO_TYPE) {
+    heartbeats = await getMongoHeartBeatsByDuration(monitorId, duration);
+  }
+  if (type === REDIS_TYPE) {
+    heartbeats = await getRedisHeartBeatsByDuration(monitorId, duration);
+  }
+  return heartbeats;
+};
+
+export const deleteMonitorTypeHeartbeats = async (
+  monitorId: number,
+  type: string
+): Promise<void> => {
+  let model = null;
+  if (type === HTTP_TYPE) {
+    model = HttpModel;
+  }
+  if (type === MONGO_TYPE) {
+    model = MongoModel;
+  }
+  if (type === REDIS_TYPE) {
+    model = RedisModel;
+  }
+  if (type === TCP_TYPE) {
+    // model = TcpModel;
+  }
+
+  if (model !== null) {
+    await model.destroy({
+      where: { monitorId },
+    });
   }
 };

@@ -1,4 +1,8 @@
-import { appTimeZone, authenticateGraphQLRoute } from "../../utils/utils.js";
+import {
+  appTimeZone,
+  authenticateGraphQLRoute,
+  uptimePercentage,
+} from "../../utils/utils.js";
 import {
   AppContext,
   IMonitorArgs,
@@ -7,6 +11,7 @@ import {
 import {
   createMonitor,
   deleteSingleMonitor,
+  getHeartbeats,
   getMonitorById,
   getUserActiveMonitors,
   getUserMonitors,
@@ -21,6 +26,7 @@ import pkg from "lodash";
 import { subscribe } from "graphql";
 const { toLower } = pkg;
 import { PubSub } from "graphql-subscriptions";
+import { IHeartBeat } from "src/interface/heartbeat.interface.js";
 
 export const pubSub = new PubSub();
 
@@ -184,15 +190,14 @@ export const MonitorResolver = {
       try {
         const { req } = contextValue;
         authenticateGraphQLRoute(req);
-        const { monitorId, userId } = args;
-        const monitors: IMonitorDocument[] = await deleteSingleMonitor(
+        const { monitorId, userId, type } = args;
+        await deleteSingleMonitor(
           parseInt(`${monitorId}`),
           parseInt(`${userId}`),
-          "http"
+          type!
         );
-
         return {
-          monitors,
+          id: monitorId,
         };
       } catch (error: any) {
         throw new Error(error);
@@ -207,8 +212,21 @@ export const MonitorResolver = {
         ? parseInt(`${monitor.responseTime}`)
         : monitor.responseTime;
     },
-    notifications: (monitor: IMonitorDocument) => {
-      return getSingleNotificationGroup(monitor.notificationId!);
+    notifications: async (monitor: IMonitorDocument) => {
+      const result = await getSingleNotificationGroup(monitor.notificationId!);
+      return result ? [result] : [];
+    },
+    heartbeats: async (monitor: IMonitorDocument) => {
+      const heartbeats = await getHeartbeats(monitor.type, monitor.id!, 24);
+      return heartbeats.slice(0, 16);
+    },
+    uptime: async (monitor: IMonitorDocument): Promise<number> => {
+      const heartbeats: IHeartBeat[] = await getHeartbeats(
+        monitor.type,
+        monitor.id!,
+        24
+      );
+      return uptimePercentage(heartbeats);
     },
   },
   Subscription: {
