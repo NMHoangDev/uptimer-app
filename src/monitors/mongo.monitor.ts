@@ -11,19 +11,23 @@ import {
 } from "../services/monitor.service.js";
 import { mongodbPing } from "./monitor.js";
 import { createMongoHeartBeat } from "../services/mongo.service.js";
+import { IEmailLocals } from "../interface/notification.interface.js";
+import { emailSender, locals } from "../utils/utils.js";
 
 class MongoMonitor {
   errorCount: number;
   noSuccessAlert: boolean;
-  // emailsLocals: IEmailLocals;
+  emailsLocals: IEmailLocals;
 
   constructor() {
     this.errorCount = 0;
     this.noSuccessAlert = true;
-    //   this.emailsLocals = locals();
+    this.emailsLocals = {} as IEmailLocals;
   }
 
   async start(data: IMonitorDocument): Promise<void> {
+    this.emailsLocals = locals();
+
     const { monitorId, url } = data;
     try {
       const monitorData: IMonitorDocument = await getMonitorById(monitorId!);
@@ -65,12 +69,12 @@ class MongoMonitor {
     ) {
       this.errorCount = 0;
       this.noSuccessAlert = false;
-      //TODO: send error email
-      // emailSender(
-      //   monitorData.notifications!.emails,
-      //   'errorStatus',
-      //   this.emailsLocals
-      // );
+      // TODO: send error email
+      emailSender(
+        monitorData.notifications!.emails,
+        "errorStatus",
+        this.emailsLocals
+      );
     }
     logger.info(
       `MONGODB heartbeat failed assertions: Monitor ID ${monitorData.id}`
@@ -98,11 +102,11 @@ class MongoMonitor {
       this.errorCount = 0;
       this.noSuccessAlert = true;
       //TODO: send email error
-      // emailSender(
-      //   monitorData.notifications!.emails,
-      //   'successStatus',
-      //   this.emailsLocals
-      // );
+      emailSender(
+        monitorData.notifications!.emails,
+        "successStatus",
+        this.emailsLocals
+      );
     }
     logger.info(`MONGODB heartbeat success: Monitor ID ${monitorData.id}`);
   }
@@ -134,6 +138,11 @@ class MongoMonitor {
       this.errorCount = 0;
       this.noSuccessAlert = false;
       //TODO: send email error
+      emailSender(
+        monitorData.notifications!.emails,
+        "errorStatus",
+        this.emailsLocals
+      );
     }
   }
 }

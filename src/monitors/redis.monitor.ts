@@ -14,19 +14,22 @@ import { IEmailLocals } from "../interface/notification.interface.js";
 // import { emailSender, locals } from '../utils/utils.js';
 
 import { redisPing } from "./monitor.js";
+import { emailSender, locals } from "../utils/utils.js";
 
 class RedisMonitor {
   errorCount: number;
   noSuccessAlert: boolean;
-  //   emailsLocals: IEmailLocals;
+  emailsLocals: IEmailLocals;
 
   constructor() {
     this.errorCount = 0;
     this.noSuccessAlert = true;
-    // this.emailsLocals = locals();
+    this.emailsLocals = {} as IEmailLocals;
   }
 
   async start(data: IMonitorDocument) {
+    this.emailsLocals = locals();
+
     const { monitorId, url } = data;
     try {
       const monitorData: IMonitorDocument = await getMonitorById(monitorId!);
@@ -76,6 +79,11 @@ class RedisMonitor {
         this.noSuccessAlert = false;
 
         //TODO: send email error
+        emailSender(
+          monitorData.notifications!.emails,
+          "errorStatus",
+          this.emailsLocals
+        );
       }
     } else {
       await Promise.all([
@@ -86,11 +94,13 @@ class RedisMonitor {
       if (!this.noSuccessAlert) {
         this.errorCount = 0;
         this.noSuccessAlert = true;
-        // emailSender(
-        //   monitorData.notifications!.emails,
-        //   "successStatus",
-        //   this.emailsLocals
-        // );
+
+        //TODO: send email success
+        emailSender(
+          monitorData.notifications!.emails,
+          "successStatus",
+          this.emailsLocals
+        );
       }
     }
   }
@@ -119,11 +129,12 @@ class RedisMonitor {
     ) {
       this.errorCount = 0;
       this.noSuccessAlert = false;
-      //   emailSender(
-      //     monitorData.notifications!.emails,
-      //     "errorStatus",
-      //     this.emailsLocals
-      //   );
+      // TODO: send email error
+      emailSender(
+        monitorData.notifications!.emails,
+        "errorStatus",
+        this.emailsLocals
+      );
     }
   }
 }

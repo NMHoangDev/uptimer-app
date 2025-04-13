@@ -11,7 +11,11 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const env = process.env;
 
-export const POSTGRES_DB = env.POSTGRES_DB as string;
+export const DB_HOST = env.DB_HOST as string;
+export const DB_USERNAME = env.DB_USERNAME as string;
+export const DB_NAME = env.DB_NAME as string;
+export const DB_PORT = env.DB_PORT as string;
+export const DB_PASSWORD = env.DB_PASSWORD as string;
 export const NODE_ENV = env.NODE_ENV as string;
 export const SECRET_KEY_ONE = env.SECRET_KEY_ONE as string;
 export const SECRET_KEY_TWO = env.SECRET_KEY_TWO as string;

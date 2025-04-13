@@ -3,7 +3,7 @@ import { GraphQLError } from "graphql";
 import pkg from "jsonwebtoken";
 
 import { IAuthPayload } from "../interface/user.interface.js";
-import { JWT_TOKEN } from "../server/config.js";
+import { CLIENT_URL, JWT_TOKEN } from "../server/config.js";
 import { resolve } from "path";
 import pkgLodash from "lodash";
 import { IMonitorDocument } from "../interface/monitor.interface.js";
@@ -17,6 +17,7 @@ import { startSingleJob } from "./jobs.js";
 import { pubSub } from "../graphql/resolvers/monitor.js";
 import logger from "../server/logger.js";
 import { IHeartBeat } from "../interface/heartbeat.interface.js";
+import { IEmailLocals } from "src/interface/notification.interface.js";
 const { min, toLower } = pkgLodash;
 
 export const appTimeZone: string =
@@ -123,6 +124,18 @@ export const uptimePercentage = (heartbeats: IHeartBeat[]): number => {
   const uptime = ((total - down) / total) * 100;
   return isNaN(uptime) ? 0 : Math.round(uptime);
 };
+export const emailSender = async (
+  notificationEmails: string,
+  template: string,
+  locals: IEmailLocals
+): Promise<void> => {
+  const emails = JSON.parse(notificationEmails);
+  for (const email of emails) {
+    try {
+      await emailSender(template, email, locals);
+    } catch (error) {}
+  }
+};
 
 const getCookies = (cookie: string): Record<string, string> => {
   const cookies: Record<string, string> = {};
@@ -131,4 +144,11 @@ const getCookies = (cookie: string): Record<string, string> => {
     cookies[parts![1].trim()] = (parts![2] || "").trim();
   });
   return cookies;
+};
+export const locals = (): IEmailLocals => {
+  return {
+    appLink: `${CLIENT_URL}`,
+    appIcon: "https://ibb.com/jD45fqX",
+    appName: "",
+  };
 };
