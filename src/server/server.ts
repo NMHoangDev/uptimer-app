@@ -26,7 +26,11 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import customFormat from "dayjs/plugin/customParseFormat.js";
 import dayjs from "dayjs";
-import { enableAutoRefreshJob, startMonitors } from "../utils/utils.js";
+import {
+  enableAutoRefreshJob,
+  startMonitors,
+  startSSLMonitors,
+} from "../utils/utils.js";
 import { WebSocketServer, Server as WSServer } from "ws";
 import { useServer } from "../../node_modules/graphql-ws/dist/use/ws.js";
 
@@ -172,6 +176,7 @@ export default class MonitorServer {
           chalk.green.bold(`Server started with port ${SERVER_PORT}`)
         );
         startMonitors();
+        startSSLMonitors();
       });
     } catch (error) {
       logger.error("Error in start method:", error);

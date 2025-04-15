@@ -9,26 +9,28 @@ import {
   getMonitorById,
   updateMonitorStatus,
 } from "../services/monitor.service.js";
-import { encodeBase64 } from "../utils/utils.js";
+import { emailSender, encodeBase64, locals } from "../utils/utils.js";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { IHeartBeat } from "../interface/heartbeat.interface.js";
 import dayjs from "dayjs";
 import { request } from "express";
 import { createHttpHeartBeat } from "../services/http.service.js";
 import logger from "../server/logger.js";
+import { IEmailLocals } from "../interface/notification.interface.js";
 
 class HttpMonitor {
   errorCount: number;
   noSuccessAlert: boolean;
-  // emailsLocals: IEmailLocals;
+  emailsLocals: IEmailLocals;
 
   constructor() {
     this.errorCount = 0;
-    // this.emailsLocals = ;
     this.noSuccessAlert = true;
+    this.emailsLocals = {} as IEmailLocals;
   }
 
   async start(data: IMonitorDocument): Promise<void> {
+    this.emailsLocals = locals();
     const {
       monitorId,
       httpAuthMethod,
@@ -46,7 +48,7 @@ class HttpMonitor {
     const startTime: number = Date.now();
     try {
       const monitorData: IMonitorDocument = await getMonitorById(monitorId!);
-      // this.emailsLocals.appName = monitorData.name;
+      this.emailsLocals.appName = monitorData.name;
       let basicAuthHeader = {};
       if (httpAuthMethod === "basic") {
         basicAuthHeader = {
@@ -148,6 +150,11 @@ class HttpMonitor {
       this.errorCount = 0;
       this.noSuccessAlert = false;
       //TODO: send error email
+      emailSender(
+        monitorData.notifications!.emails,
+        "errorStatus",
+        this.emailsLocals
+      );
     }
     logger.info(`HTTP heartbeat failure assertion: ${monitorData.id}`);
   }
@@ -162,7 +169,12 @@ class HttpMonitor {
     if (!this.noSuccessAlert) {
       this.errorCount = 0;
       this.noSuccessAlert = true;
-      //TODO: send error email
+      //TODO: send success email
+      emailSender(
+        monitorData.notifications!.emails,
+        "successStatus",
+        this.emailsLocals
+      );
     }
     logger.info(`HTTP heartbeat success assertion: ${monitorData.id}`);
   }
@@ -204,6 +216,11 @@ class HttpMonitor {
       this.errorCount = 0;
       this.noSuccessAlert = false;
       //TODO: send email error
+      emailSender(
+        monitorData.notifications!.emails,
+        "errorStatus",
+        this.emailsLocals
+      );
     }
   }
 }
