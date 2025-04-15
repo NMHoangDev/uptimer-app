@@ -17,7 +17,13 @@ import { startSingleJob } from "./jobs.js";
 import { pubSub } from "../graphql/resolvers/monitor.js";
 import logger from "../server/logger.js";
 import { IHeartBeat } from "../interface/heartbeat.interface.js";
-import { IEmailLocals } from "src/interface/notification.interface.js";
+import { IEmailLocals } from "../interface/notification.interface.js";
+import { ISSLMonitorDocument } from "../interface/ssl.interface.js";
+import {
+  getAllUsersActiveSSLMonitors,
+  getSSLMonitorById,
+  sslStatusMonitor,
+} from "../services/ssl.service.js";
 const { min, toLower } = pkgLodash;
 
 export const appTimeZone: string =
@@ -38,6 +44,28 @@ export const isEmail = (email: string): boolean => {
  * @param {req}
  * @returns {void}
  */
+
+/**
+ * Resumes a single monitor
+ * @param monitorId
+ * @returns {Promise<void>}
+ */
+export const resumeMonitors = async (monitorId: number): Promise<void> => {
+  const monitor: IMonitorDocument = await getMonitorById(monitorId);
+  startCreatedMonitors(monitor, toLower(monitor.name), monitor.type);
+  await sleep(getRandomInt(300, 1000));
+};
+
+/**
+ * Resumes a single ssl monitor
+ * @param monitorId
+ * @returns {Promise<void>}
+ */
+export const resumeSSLMonitors = async (monitorId: number): Promise<void> => {
+  const monitor: ISSLMonitorDocument = await getSSLMonitorById(monitorId);
+  sslStatusMonitor(monitor, toLower(monitor.name));
+  await sleep(getRandomInt(300, 1000));
+};
 
 export const authenticateGraphQLRoute = (req: Request): void => {
   if (!req.session?.jwt) {
@@ -73,7 +101,10 @@ export const getRandomInt = (min: number, max: number): number => {
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min + 1) + min);
 };
-
+/**
+ * Start all active monitor
+ * @returns {Promise<void>}
+ */
 export const startMonitors = async (): Promise<void> => {
   const list: IMonitorDocument[] = await getAllUserActiveMonitor();
 
@@ -82,11 +113,19 @@ export const startMonitors = async (): Promise<void> => {
     await sleep(getRandomInt(300, 1000));
   }
 };
-export const resumeMonitors = async (monitorId: number): Promise<void> => {
-  const monitor: IMonitorDocument = await getMonitorById(monitorId);
-  startCreatedMonitors(monitor, toLower(monitor.name), monitor.type);
-  await sleep(getRandomInt(300, 1000));
+/**
+ * Start all ssl active monitor
+ * @returns {Promise<void>}
+ */
+export const startSSLMonitors = async (): Promise<void> => {
+  const list: ISSLMonitorDocument[] = await getAllUsersActiveSSLMonitors();
+
+  for (const monitor of list) {
+    sslStatusMonitor(monitor, toLower(monitor.name));
+    await sleep(getRandomInt(300, 1000));
+  }
 };
+
 export const enableAutoRefreshJob = (cookies: string): void => {
   const { verify } = pkg;
   const result: Record<string, string> = getCookies(cookies);
@@ -135,6 +174,17 @@ export const emailSender = async (
       await emailSender(template, email, locals);
     } catch (error) {}
   }
+};
+export const getDaysBetween = (start: Date, end: Date): number => {
+  return Math.round(Math.abs(+start - +end) / (1000 * 60 * 60 * 24));
+};
+
+export const getDaysRemaining = (start: Date, end: Date): number => {
+  const daysRemaining = getDaysBetween(start, end);
+  if (new Date(end).getTime() < new Date().getTime()) {
+    return -daysRemaining;
+  }
+  return daysRemaining;
 };
 
 const getCookies = (cookie: string): Record<string, string> => {

@@ -1,4 +1,4 @@
-import { INotificationDocument } from "./notification.interface";
+import { INotificationDocument } from "./notification.interface.js";
 
 export interface ISSLMonitorDocument {
   id?: number;

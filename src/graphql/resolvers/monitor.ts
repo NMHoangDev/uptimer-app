@@ -1,6 +1,7 @@
 import {
   appTimeZone,
   authenticateGraphQLRoute,
+  resumeMonitors,
   uptimePercentage,
 } from "../../utils/utils.js";
 import {
@@ -152,6 +153,7 @@ export const MonitorResolver = {
         } else {
           //TODO: Add a resume method
           logger.info(`Resume monitor`);
+          resumeMonitors(monitorId!);
         }
         return {
           monitors: results,
