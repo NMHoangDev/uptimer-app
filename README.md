@@ -1,7 +1,13 @@
-# uptimer-app
- Ứng dụng giám sát thời gian hoạt động, được thiết kế để liên tục theo dõi tính khả dụng và hiệu suất của các trang web, máy chủ hoặc ứng dụng(Tiến độ 30%)
-# HOW TO USING THIS CODE:
-STEP 1: CLONE THIS CODE (CLONE code về máy)
-STEP 2: CREATE /bulid folder in root project(Tạo thư mục /build trong thư mục gốc của project)
-STEP 3: Run this command: **npm install**(chạy npm install)
-STEP 4: Run **npm run dev**(chạy npm run dev)
+## 🖥 Uptimer App
+A web-based monitoring application designed to continuously track the availability and performance of websites, servers, or online services.
+Project Status: 30% completed
+## ⚙ How to Use This Code
+Step 1: Clone the repository
+git clone <repository-url>
+Step 2: Create a /build folder in the project root
+Used for storing compiled output or server files.
+Step 3: Install dependencies
+npm install
+Step 4: Start the development server
+npm run dev
+# Note: The frontend interface is currently under development. Please stay tuned — it will be available soon!
